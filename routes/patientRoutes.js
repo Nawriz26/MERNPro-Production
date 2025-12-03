@@ -15,14 +15,14 @@
  * - Mutating routes require certain roles (requireRole)
  *
  * Endpoints:
- *   GET    /           → List all patients (all authenticated roles)
- *   POST   /           → Create new patient (admin, receptionist)
+ *   GET    /                 → List all patients (all authenticated roles)
+ *   POST   /                 → Create new patient (admin, receptionist)
  *
- *   GET    /:id        → Get single patient details
- *   PUT    /:id        → Update patient record (admin, receptionist)
- *   DELETE /:id        → Delete patient (admin only)
+ *   GET    /:id              → Get single patient details
+ *   PUT    /:id              → Update patient record (admin, receptionist)
+ *   DELETE /:id              → Delete patient (admin only)
  *
- *   POST   /:id/attachments → Upload X-rays or other attachments
+ *   POST   /:id/attachments  → Upload X-rays or other attachments
  */
 
 import express from "express";
@@ -70,11 +70,11 @@ const upload = multer({ storage });
 router
   .route("/")
   .get(
-    protect,                     // 🔐 Must be logged in
-    getPatients                  // 📄 List patients
+    protect, // 🔐 Must be logged in
+    getPatients // 📄 List patients
   )
   .post(
-    protect,                     // 🔐 Must be logged in
+    protect, // 🔐 Must be logged in
     requireRole("admin", "receptionist"), // 👩‍⚕️ Only admin/receptionist can create
     createPatient
   );
@@ -85,8 +85,8 @@ router
 router
   .route("/:id")
   .get(
-    protect,                     // 🔐 Must be logged in
-    getPatient                   // 📄 Get single patient
+    protect, // 🔐 Must be logged in
+    getPatient // 📄 Get single patient
   )
   .put(
     protect,
@@ -95,7 +95,7 @@ router
   )
   .delete(
     protect,
-    requireRole("admin"),        // ❌ Only admin can delete
+    requireRole("admin"), // ❌ Only admin can delete
     deletePatient
   );
 
@@ -109,27 +109,27 @@ router.post(
   "/:id/attachments",
   protect,
   requireRole("admin", "dentist", "receptionist"), // 📎 Staff with access
-  upload.single("file"),                             // Handle single file upload
+  upload.single("file"), // Handle single file upload from field name "file"
   async (req, res) => {
     try {
       const patient = await Patient.findById(req.params.id);
-
       if (!patient) {
         return res.status(404).json({ message: "Patient not found" });
       }
 
-      // Save file metadata in MongoDB
+      // Append new attachment metadata to array
       patient.attachments.push({
         filename: req.file.filename,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size,
+        // uploadedAt will auto default in schema
       });
 
       await patient.save();
 
       res.status(201).json({
-        message: "Attachment uploaded",
+        message: "File uploaded",
         attachments: patient.attachments,
       });
     } catch (err) {

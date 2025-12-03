@@ -10,7 +10,7 @@ import axios from 'axios';
 
 // Create axios client for API requests
 const api = axios.create({
-  baseURL: '/api', // CRA proxy → http://localhost:4000/api
+  baseURL: process.env.REACT_APP_API_URL || "/api",
 });
 
 // Attach JWT token on every request (if present)

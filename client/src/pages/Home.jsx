@@ -4,10 +4,10 @@
 // - When logged in, fetches and displays a short list of recent patients
 // - Footer tagline at the bottom
 
+import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-
 
 export default function Home() {
   const { user } = useAuth();
@@ -38,12 +38,14 @@ export default function Home() {
           <p>
             Get started by signing in or creating an account to manage patients.
           </p>
-          <a href="/login" className="btn btn-primary me-2">
+
+          {/* ✅ Use React Router <Link> instead of <a href> */}
+          <Link to="/login" className="btn btn-primary me-2">
             Sign In
-          </a>
-          <a href="/signup" className="btn btn-outline-primary">
+          </Link>
+          <Link to="/signup" className="btn btn-outline-primary">
             Sign Up
-          </a>
+          </Link>
         </div>
       )}
 

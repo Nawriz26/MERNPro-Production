@@ -13,7 +13,6 @@ import { usePatients } from '../context/PatientContext';
 import { toast } from 'react-toastify';
 import ConfirmModal from '../components/ConfirmModal';
 
-
 export default function Dashboard() {
   // Full list of patients fetched from API
   const [patients, setPatients] = useState([]);
@@ -53,29 +52,27 @@ export default function Dashboard() {
 
   // Create new patient
   const create = async (payload) => {
-  try {
-    await api.post('/patients', payload);
-    toast.success('Patient created');
-    await load();
-  } catch (err) {
-    const msg = err.response?.data?.message || 'Error saving patient';
-    toast.error(msg);
-  }
-};
-
+    try {
+      await api.post('/patients', payload);
+      toast.success('Patient created');
+      await load();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error saving patient';
+      toast.error(msg);
+    }
+  };
 
   // Update existing patient (based on `editing._id`)
   const update = async (payload) => {
-  try {
-    await api.put(`/patients/${editing._id}`, payload);
-    toast.success('Patient updated');
-    await load();
-  } catch (err) {
-    const msg = err.response?.data?.message || 'Error updating patient';
-    toast.error(msg);
-  }
-};
-
+    try {
+      await api.put(`/patients/${editing._id}`, payload);
+      toast.success('Patient updated');
+      await load();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Error updating patient';
+      toast.error(msg);
+    }
+  };
 
   // Delete patient by id
   const remove = async (id) => {
@@ -92,6 +89,32 @@ export default function Dashboard() {
       await create(payload);
     }
     setEditing(null);
+  };
+
+  /**
+   * Upload handler for patient attachments (e.g. X-rays).
+   * - Called from PatientTable via onUpload(patientId, file)
+   * - Uses multipart/form-data to send file to /api/patients/:id/attachments
+   */
+  const handleUpload = async (patientId, file) => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await api.post(`/patients/${patientId}/attachments`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      toast.success('Attachment uploaded');
+      // Optional: reload patients if you want to later show attachment info
+      await load();
+    } catch (err) {
+      console.error('Upload error:', err);
+      toast.error('Failed to upload attachment');
+    }
   };
 
   // Apply search filter to patients list
@@ -155,6 +178,7 @@ export default function Dashboard() {
               patients={current}
               onEdit={setEditing}           // pass entire patient for editing
               onDelete={setSelectedPatient} // store id for ConfirmModal
+              onUpload={handleUpload}       // 🔁 NEW: upload attachments
             />
 
             {/* Confirm delete modal */}

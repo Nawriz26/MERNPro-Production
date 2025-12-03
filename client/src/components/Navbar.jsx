@@ -2,9 +2,14 @@
  * Navbar Component
  * ----------------
  * - Displays logo, navigation links, and auth actions
- * - Shows different menu items depending on login status
+ * - Shows different menu items depending on login status & role
  * - Includes dark mode toggle (via DarkModeContext)
  * - Responsive: includes hamburger menu
+ *
+ * Role-based visibility:
+ * - Dashboard: all authenticated users
+ * - Appointments: admin, dentist, receptionist
+ * - (Future) Admin page: admin only
  */
 
 import { useState } from 'react';
@@ -19,6 +24,8 @@ export default function Navbar() {
   const { patientCount } = usePatients();
   const [isOpen, setIsOpen] = useState(false);
 
+  const { isDark, toggleDarkMode } = useDarkMode();
+
   // Toggle mobile menu open/close
   const toggle = () => setIsOpen((prev) => !prev);
   const closeMenu = () => setIsOpen(false);
@@ -29,7 +36,8 @@ export default function Navbar() {
       isActive ? 'active fw-semibold text-warning' : 'text-white-50'
     }`;
 
-  const { isDark, toggleDarkMode } = useDarkMode();
+  // Simple helper for RBAC checks
+  const hasRole = (...roles) => user && roles.includes(user.role);
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary px-3 shadow-sm">
@@ -48,7 +56,7 @@ export default function Navbar() {
             width: '40px',
             objectFit: 'cover',
             borderRadius: '6px',
-            marginRight: '10px'
+            marginRight: '10px',
           }}
         />
         <span className="fw-bold text-white">MERNPro Dental</span>
@@ -96,6 +104,7 @@ export default function Navbar() {
           {/* Authenticated user links */}
           {user && (
             <>
+              {/* Dashboard: visible to all authenticated users */}
               <li className="nav-item">
                 <NavLink className={navLinkClass} to="/dashboard" onClick={closeMenu}>
                   <i className="bi bi-grid me-1"></i> Dashboard
@@ -108,12 +117,25 @@ export default function Navbar() {
                 </NavLink>
               </li>
 
-              <li className="nav-item">
-                <NavLink className={navLinkClass} to="/appointments" onClick={closeMenu}>
-                  <i className="bi bi-calendar-event me-1"></i> Appointments
-                </NavLink>
-              </li>
+              {/* Appointments: only for admin, dentist, receptionist */}
+              {hasRole('admin', 'dentist', 'receptionist') && (
+                <li className="nav-item">
+                  <NavLink className={navLinkClass} to="/appointments" onClick={closeMenu}>
+                    <i className="bi bi-calendar-event me-1"></i> Appointments
+                  </NavLink>
+                </li>
+              )}
 
+              {/* (Optional) Example of future Admin page */}
+              {hasRole('admin') && (
+                <li className="nav-item">
+                  <NavLink className={navLinkClass} to="/admin" onClick={closeMenu}>
+                    <i className="bi bi-shield-lock me-1"></i> Admin
+                  </NavLink>
+                </li>
+              )}
+
+              {/* Profile: all authenticated users */}
               <li className="nav-item">
                 <NavLink className={navLinkClass} to="/profile" onClick={closeMenu}>
                   <i className="bi bi-person-circle me-1"></i> My Profile
@@ -147,6 +169,11 @@ export default function Navbar() {
                   <span className="fw-semibold text-white">
                     {user.username}
                   </span>
+                  {user.role && (
+                    <span className="badge bg-light text-dark ms-2 text-capitalize">
+                      {user.role}
+                    </span>
+                  )}
                 </span>
               </li>
 

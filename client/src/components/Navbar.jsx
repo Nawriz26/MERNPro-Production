@@ -9,6 +9,7 @@
  * Role-based visibility:
  * - Dashboard: all authenticated users
  * - Appointments: admin, dentist, receptionist
+ * - Calendar: admin, dentist, receptionist
  * - (Future) Admin page: admin only
  */
 
@@ -122,6 +123,15 @@ export default function Navbar() {
                 <li className="nav-item">
                   <NavLink className={navLinkClass} to="/appointments" onClick={closeMenu}>
                     <i className="bi bi-calendar-event me-1"></i> Appointments
+                  </NavLink>
+                </li>
+              )}
+
+              {/* 🆕 Calendar: only for admin, dentist, receptionist */}
+              {hasRole('admin', 'dentist', 'receptionist') && (
+                <li className="nav-item">
+                  <NavLink className={navLinkClass} to="/calendar" onClick={closeMenu}>
+                    <i className="bi bi-calendar3 me-1"></i> Calendar
                   </NavLink>
                 </li>
               )}

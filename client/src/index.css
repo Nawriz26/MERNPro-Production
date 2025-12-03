@@ -1,0 +1,165 @@
+/**
+ * index.css
+ * ---------
+ * Global styling for the MERNPro Dental Clinic application.
+ *
+ * Contains:
+ * - Base typography + font smoothing
+ * - Dark theme styles (body, cards, table, navbar)
+ * - Light theme defaults
+ * - Navbar animations + hover effects
+ * - Button and brand animations
+ * - Smooth page transition effect
+ */
+
+/* Base font + smoothing */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ------------------------- */
+/*     DARK THEME STYLING    */
+/* ------------------------- */
+
+.dark-theme .modal-content {
+  border: 1px solid #101829;
+  background-color: #1d273d;
+  color: #f8f9fa;
+}
+
+.dark-theme footer {
+  background-color: #24396b;
+  color: #f8f9fa;
+}
+
+/* Light footer */
+footer {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+/* Table dark-mode coloring */
+.dark-theme .table-striped th {
+  background-color: #1d273d;
+  color: white;
+}
+
+.dark-theme .table-striped > tbody > tr:nth-child(odd) > td {
+  background-color: #282e3d;
+  color: white;
+}
+
+.dark-theme .table-striped > tbody > tr:nth-child(even) > td {
+  background-color: #3f4349;
+  color: white;
+}
+
+/* Light mode table rows */
+.table-striped > tbody > tr:nth-child(odd) > td {
+  background-color: rgb(243, 250, 255);
+}
+
+.table-striped > tbody > tr:nth-child(even) > td {
+  background-color: rgb(255, 255, 255);
+}
+
+/* ------------------------- */
+/*     NAVBAR ANIMATION      */
+/* ------------------------- */
+
+.nav-link-animated {
+  transition: background-color 0.2s ease, transform 0.1s ease, color 0.2s ease;
+  border-radius: 999px;
+  padding-inline: 0.85rem;
+}
+
+.nav-link-animated:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+  color: #ffffff !important;
+}
+
+.navbar .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffc107 !important;
+}
+
+/* Logo hover animation */
+.nav-brand-animated {
+  transition: transform 0.15s ease;
+}
+
+.nav-brand-animated:hover {
+  transform: translateY(-1px);
+}
+
+/* Button hover effect */
+.btn-animated {
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.btn-animated:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0.4rem 0.8rem rgba(0, 0, 0, 0.25);
+}
+
+.navbar.shadow-sm {
+  box-shadow: 0 0.2rem 0.6rem rgba(0, 0, 0, 0.25) !important;
+}
+
+/* ------------------------- */
+/*        THEME ROOTS        */
+/* ------------------------- */
+
+body.light-theme {
+  background-color: #f5f6fa;
+  color: #212529;
+}
+
+body.dark-theme {
+  background-color: #101829;
+  color: #f8f9fa;
+}
+
+.dark-theme .card {
+  background-color: #1d273d;
+  color: #f8f9fa;
+}
+
+.dark-theme .list-group-item {
+  background-color: #111827;
+  color: #f8f9fa;
+}
+
+.dark-theme .table {
+  color: #f8f9fa;
+}
+
+.dark-theme .navbar {
+  background-color: #132858 !important;
+  color: #f8f9fa;
+}
+
+/* ------------------------- */
+/*    PAGE TRANSITIONS       */
+/* ------------------------- */
+
+.page-transition {
+  animation: fadeInUp 0.35s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

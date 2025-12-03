@@ -1,23 +1,36 @@
 /**
  * patientRoutes.js
  * -----------------
- * Defines Express routes to manage patient records.
+ * Express routing layer for patient-related operations.
  *
- * Route prefix: /api/patients
+ * Base URL: /api/patients
  *
- * Responsibilities:
- * - GET    /        → List all patients
- * - POST   /        → Create a patient
- * - GET    /:id     → Get single patient details
- * - PUT    /:id     → Update patient record
- * - DELETE /:id     → Remove a patient
+ * Features:
+ * - Full CRUD for patient records
+ * - Role-based access control (Admin / Dentist / Receptionist)
+ * - File upload endpoint for dental attachments (X-rays, documents)
  *
  * Security:
- * - All routes require authentication using protect middleware.
+ * - All routes require authentication (protect middleware)
+ * - Mutating routes require certain roles (requireRole)
+ *
+ * Endpoints:
+ *   GET    /           → List all patients (all authenticated roles)
+ *   POST   /           → Create new patient (admin, receptionist)
+ *
+ *   GET    /:id        → Get single patient details
+ *   PUT    /:id        → Update patient record (admin, receptionist)
+ *   DELETE /:id        → Delete patient (admin only)
+ *
+ *   POST   /:id/attachments → Upload X-rays or other attachments
  */
 
 import express from "express";
-import { protect } from "../middleware/authMiddleware.js";
+import multer from "multer";
+import path from "path";
+
+import { protect, requireRole } from "../middleware/authMiddleware.js";
+
 import {
   getPatients,
   getPatient,
@@ -26,19 +39,104 @@ import {
   deletePatient,
 } from "../controllers/patientController.js";
 
+import Patient from "../models/patient.js";
+
 const router = express.Router();
 
-// /api/patients
+/* --------------------------------------------
+ *   Multer Configuration for File Uploads
+ * --------------------------------------------
+ * Files are saved to /uploads folder with unique
+ * timestamps to avoid collisions.
+ * ------------------------------------------ */
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // ensure this folder exists
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${file.fieldname}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+/* --------------------------------------------
+ *   ROUTES: /api/patients
+ * ------------------------------------------ */
+
+// GET /api/patients → List all patients
+// POST /api/patients → Create new patient
 router
   .route("/")
-  .get(protect, getPatients)     // All patients
-  .post(protect, createPatient); // Create new patient
+  .get(
+    protect,                     // 🔐 Must be logged in
+    getPatients                  // 📄 List patients
+  )
+  .post(
+    protect,                     // 🔐 Must be logged in
+    requireRole("admin", "receptionist"), // 👩‍⚕️ Only admin/receptionist can create
+    createPatient
+  );
 
-// /api/patients/:id
+// GET /api/patients/:id → Get single patient
+// PUT /api/patients/:id → Update patient
+// DELETE /api/patients/:id → Delete patient (admin only)
 router
   .route("/:id")
-  .get(protect, getPatient)      // Find patient by ID
-  .put(protect, updatePatient)   // Update patient record
-  .delete(protect, deletePatient); // Delete patient record
+  .get(
+    protect,                     // 🔐 Must be logged in
+    getPatient                   // 📄 Get single patient
+  )
+  .put(
+    protect,
+    requireRole("admin", "receptionist"), // ✏️ Update allowed for admin/receptionist
+    updatePatient
+  )
+  .delete(
+    protect,
+    requireRole("admin"),        // ❌ Only admin can delete
+    deletePatient
+  );
+
+/* --------------------------------------------
+ *   File Upload: POST /api/patients/:id/attachments
+ * --------------------------------------------
+ * Uploads dental files (X-rays, reports, etc.)
+ * and attaches metadata to the patient record.
+ * ------------------------------------------ */
+router.post(
+  "/:id/attachments",
+  protect,
+  requireRole("admin", "dentist", "receptionist"), // 📎 Staff with access
+  upload.single("file"),                             // Handle single file upload
+  async (req, res) => {
+    try {
+      const patient = await Patient.findById(req.params.id);
+
+      if (!patient) {
+        return res.status(404).json({ message: "Patient not found" });
+      }
+
+      // Save file metadata in MongoDB
+      patient.attachments.push({
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      });
+
+      await patient.save();
+
+      res.status(201).json({
+        message: "Attachment uploaded",
+        attachments: patient.attachments,
+      });
+    } catch (err) {
+      console.error("Attachment upload error:", err);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  }
+);
 
 export default router;

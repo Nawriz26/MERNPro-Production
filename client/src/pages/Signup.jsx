@@ -9,7 +9,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
-
 export default function Signup() {
   // Single form object for username / email / password
   const [form, setForm] = useState({ username: '', email: '', password: '' });
@@ -120,7 +119,10 @@ export default function Signup() {
 
         {/* Link to login */}
         <p className="text-center mt-3 pt-2">
-          Already Registered? <a href="/login">Log In</a>
+          Already Registered?{' '}
+          <Link to="/login">
+            Log In
+          </Link>
         </p>
       </form>
     </div>

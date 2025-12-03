@@ -110,7 +110,10 @@ export default function Login() {
 
         {/* Link to signup */}
         <p className="text-center mt-3 pt-2">
-          Not Registered? <a href="/signup">Sign Up</a>
+          Not Registered?{' '}
+          <Link to="/signup">
+            Sign Up
+          </Link>
         </p>
       </form>
     </div>

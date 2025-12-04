@@ -8,13 +8,6 @@ dotenv.config();
 
 const PORT = process.env.PORT || 4000;
 
-// Resolve project root (needed for static /uploads path)
-const __dirname = path.resolve();
-
-// Serve uploaded files as static assets
-// e.g. http://localhost:4000/uploads/<filename>
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 connectDB()
   .then(() => {
     app.listen(PORT, () => {

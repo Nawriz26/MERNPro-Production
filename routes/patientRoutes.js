@@ -10,24 +10,13 @@
  * - Role-based access control (Admin / Dentist / Receptionist)
  * - File upload endpoint for dental attachments (X-rays, documents)
  *
- * Security:
- * - All routes require authentication (protect middleware)
- * - Mutating routes require certain roles (requireRole)
- *
- * Endpoints:
- *   GET    /                 → List all patients (all authenticated roles)
- *   POST   /                 → Create new patient (admin, receptionist)
- *
- *   GET    /:id              → Get single patient details
- *   PUT    /:id              → Update patient record (admin, receptionist)
- *   DELETE /:id              → Delete patient (admin only)
- *
- *   POST   /:id/attachments  → Upload X-rays or other attachments
+ * Storage:
+ * - Attachments are stored directly in MongoDB as Buffer fields on the
+ *   Patient document (no local filesystem or cloud storage required).
  */
 
 import express from "express";
 import multer from "multer";
-import path from "path";
 
 import { protect, requireRole } from "../middleware/authMiddleware.js";
 
@@ -44,22 +33,19 @@ import Patient from "../models/patient.js";
 const router = express.Router();
 
 /* --------------------------------------------
- *   Multer Configuration for File Uploads
+ *   Multer Configuration for In-Memory Uploads
  * --------------------------------------------
- * Files are saved to /uploads folder with unique
- * timestamps to avoid collisions.
+ * Files are kept in memory (req.file.buffer) and then saved
+ * directly to MongoDB as a Buffer.
  * ------------------------------------------ */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // ensure this folder exists
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${file.fieldname}${ext}`);
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB max per file (safety)
   },
 });
-
-const upload = multer({ storage });
 
 /* --------------------------------------------
  *   ROUTES: /api/patients
@@ -71,10 +57,10 @@ router
   .route("/")
   .get(
     protect, // 🔐 Must be logged in
-    getPatients // 📄 List patients
+    getPatients
   )
   .post(
-    protect, // 🔐 Must be logged in
+    protect,
     requireRole("admin", "receptionist"), // 👩‍⚕️ Only admin/receptionist can create
     createPatient
   );
@@ -85,17 +71,17 @@ router
 router
   .route("/:id")
   .get(
-    protect, // 🔐 Must be logged in
-    getPatient // 📄 Get single patient
+    protect,
+    getPatient
   )
   .put(
     protect,
-    requireRole("admin", "receptionist"), // ✏️ Update allowed for admin/receptionist
+    requireRole("admin", "receptionist"),
     updatePatient
   )
   .delete(
     protect,
-    requireRole("admin"), // ❌ Only admin can delete
+    requireRole("admin"),
     deletePatient
   );
 
@@ -103,33 +89,38 @@ router
  *   File Upload: POST /api/patients/:id/attachments
  * --------------------------------------------
  * Uploads dental files (X-rays, reports, etc.)
- * and attaches metadata to the patient record.
+ * and stores them directly in MongoDB as Buffer.
  * ------------------------------------------ */
 router.post(
   "/:id/attachments",
   protect,
-  requireRole("admin", "dentist", "receptionist"), // 📎 Staff with access
-  upload.single("file"), // Handle single file upload from field name "file"
+  requireRole("admin", "dentist", "receptionist"),
+  upload.single("file"), // expects field name "file"
   async (req, res) => {
     try {
+      // No file attached?
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
       const patient = await Patient.findById(req.params.id);
+
       if (!patient) {
         return res.status(404).json({ message: "Patient not found" });
       }
 
-      // Append new attachment metadata to array
+      // Save file data + metadata into MongoDB
       patient.attachments.push({
-        filename: req.file.filename,
+        data: req.file.buffer,
         originalName: req.file.originalname,
         mimeType: req.file.mimetype,
         size: req.file.size,
-        // uploadedAt will auto default in schema
       });
 
       await patient.save();
 
       res.status(201).json({
-        message: "File uploaded",
+        message: "Attachment uploaded",
         attachments: patient.attachments,
       });
     } catch (err) {

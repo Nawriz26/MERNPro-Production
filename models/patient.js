@@ -5,19 +5,11 @@
  *
  * Responsibilities:
  * - Stores core patient demographics and contact information
- * - Provides base fields for patient management features
- *
- * Fields:
- * - name       : Full patient name
- * - email      : Unique email address (lowercased automatically)
- * - phone      : Contact number
- * - dateOfBirth: Optional birthdate
- * - address    : Optional text address
- * - notes      : Optional notes or medical remarks
- * - attachments: Uploaded files (X-rays, docs) with basic metadata
+ * - Stores any uploaded dental attachments (e.g. X-rays) directly in MongoDB
  *
  * Notes:
- * - timestamps enables createdAt + updatedAt fields
+ * - attachments[] stores file data as a Buffer plus metadata
+ * - Keep file sizes small (< 16MB) to stay under MongoDB document limits
  */
 
 import mongoose from "mongoose";
@@ -43,24 +35,20 @@ const patientSchema = new mongoose.Schema(
     },
 
     dateOfBirth: Date, // optional
+    address: String,   // optional
+    notes: String,     // optional
 
-    address: String, // optional
-
-    notes: String, // optional
-
-    /**
-     * Attachments array
-     * -----------------
-     * Stores metadata about uploaded files (e.g., X-rays, reports).
-     * The actual files are stored on disk under /uploads.
-     */
+    // 🔹 Attachments stored directly in MongoDB (Buffer)
     attachments: [
       {
-        filename: String,       // stored file name on disk
-        originalName: String,   // original file name from user
-        mimeType: String,       // e.g. image/png, application/pdf
-        size: Number,           // file size in bytes
-        uploadedAt: { type: Date, default: Date.now }, // timestamp of upload
+        data: Buffer,                 // binary file data
+        originalName: String,         // e.g. "xray-2025-12.png"
+        mimeType: String,             // e.g. "image/png"
+        size: Number,                 // bytes
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
   },

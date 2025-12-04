@@ -4,72 +4,64 @@
 // - Allows Create / Update / Delete via PatientForm + PatientTable
 // - Includes search + pagination + confirmation modal for deletes
 // - Updates global patientCount in PatientContext (for navbar badge)
+// Dashboard.jsx
+// Patient Dashboard page.
 
-import { useEffect, useState } from 'react';
-import api from '../api/axios';
-import PatientForm from '../components/PatientForm';
-import PatientTable from '../components/PatientTable';
-import { usePatients } from '../context/PatientContext';
-import { toast } from 'react-toastify';
-import ConfirmModal from '../components/ConfirmModal';
+import { useEffect, useState } from "react";
+import api from "../api/axios";
+import PatientForm from "../components/PatientForm";
+import PatientTable from "../components/PatientTable";
+import { usePatients } from "../context/PatientContext";
+import { toast } from "react-toastify";
+import ConfirmModal from "../components/ConfirmModal";
+import AttachmentsModal from "../components/AttachmentsModal";
 
 export default function Dashboard() {
-  // Full list of patients fetched from API
   const [patients, setPatients] = useState([]);
-  // Currently selected patient for edit (full object)
   const [editing, setEditing] = useState(null);
-  // Selected patient id when user clicks Delete
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [attachmentPatient, setAttachmentPatient] = useState(null); // 👈 NEW
 
-  // Global patient count (used in Navbar badge)
   const { setPatientCount } = usePatients();
 
-  // Search + pagination state
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
   // Load all patients from backend
   const load = async () => {
-    const { data } = await api.get('/patients');
+    const { data } = await api.get("/patients");
     setPatients(data);
-    setEditing(null);              // Reset editing state on reload
-    setPatientCount(data.length);  // Update global count
-    setPage(1);                    // Reset pagination to first page
+    setEditing(null);
+    setPatientCount(data.length);
+    setPage(1);
   };
 
-  // Fetch patients once on mount
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // (Reserved for future: phone auth / SMS verification)
-  const authenticatePhone = async (phone) => {
-    const { data } = await api.post('/auth/send-code', { phone });
-    return data;
-  };
-
   // Create new patient
   const create = async (payload) => {
     try {
-      await api.post('/patients', payload);
-      toast.success('Patient created');
+      await api.post("/patients", payload);
+      toast.success("Patient created");
       await load();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error saving patient';
+      const msg = err.response?.data?.message || "Error saving patient";
       toast.error(msg);
     }
   };
 
-  // Update existing patient (based on `editing._id`)
+  // Update existing patient
   const update = async (payload) => {
     try {
       await api.put(`/patients/${editing._id}`, payload);
-      toast.success('Patient updated');
+      toast.success("Patient updated");
       await load();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Error updating patient';
+      const msg = err.response?.data?.message || "Error updating patient";
       toast.error(msg);
     }
   };
@@ -77,11 +69,11 @@ export default function Dashboard() {
   // Delete patient by id
   const remove = async (id) => {
     await api.delete(`/patients/${id}`);
-    toast.success('Patient deleted');
+    toast.success("Patient deleted");
     await load();
   };
 
-  // Decide whether to create or update based on editing flag
+  // Decide create vs update
   const savePatient = async (payload) => {
     if (editing) {
       await update(payload);
@@ -91,33 +83,53 @@ export default function Dashboard() {
     setEditing(null);
   };
 
-  /**
-   * Upload handler for patient attachments (e.g. X-rays).
-   * - Called from PatientTable via onUpload(patientId, file)
-   * - Uses multipart/form-data to send file to /api/patients/:id/attachments
-   */
+  // 🔹 Upload handler for attachments (X-rays)
   const handleUpload = async (patientId, file) => {
     if (!file) return;
-
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
       await api.post(`/patients/${patientId}/attachments`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
-      toast.success('Attachment uploaded');
-      // Optional: reload patients if you want to later show attachment info
+      toast.success("Attachment uploaded");
       await load();
     } catch (err) {
-      console.error('Upload error:', err);
-      toast.error('Failed to upload attachment');
+      console.error("Upload error:", err);
+      toast.error("Failed to upload attachment");
     }
   };
 
-  // Apply search filter to patients list
+  // 🔹 Delete single attachment
+  const handleDeleteAttachment = async (patientId, attachmentId) => {
+    try {
+      await api.delete(
+        `/patients/${patientId}/attachments/${attachmentId}`
+      );
+      toast.success("Attachment deleted");
+      await load();
+
+      // If modal is open on this patient, keep it refreshed
+      setAttachmentPatient((prev) =>
+        prev && prev._id === patientId
+          ? {
+              ...prev,
+              attachments: prev.attachments.filter(
+                (a) => a._id !== attachmentId
+              ),
+            }
+          : prev
+      );
+    } catch (err) {
+      console.error("Delete attachment error:", err);
+      toast.error("Failed to delete attachment");
+    }
+  };
+
+  // Search + pagination
   const filtered = patients.filter((p) => {
     const q = searchTerm.toLowerCase();
     return (
@@ -127,13 +139,11 @@ export default function Dashboard() {
     );
   });
 
-  // Pagination math
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const start = (safePage - 1) * pageSize;
   const current = filtered.slice(start, start + pageSize);
 
-  // Helper to switch pages safely
   const goTo = (p) => {
     if (p >= 1 && p <= totalPages) setPage(p);
   };
@@ -143,13 +153,12 @@ export default function Dashboard() {
       <h2 className="center-text w-100 p-2">Patient Dashboard</h2>
 
       <div className="row mt-3">
-        {/* LEFT: Patient form (create / edit) */}
+        {/* LEFT: Patient form */}
         <div className="col-md-5">
           <div className="container card card-body ">
             <h5 className="alignContent">
-              {editing ? 'Edit Patient' : 'Add New Patient'}
+              {editing ? "Edit Patient" : "Add New Patient"}
             </h5>
-            {/* When form submits, it calls savePatient */}
             <PatientForm initial={editing} onSubmit={savePatient} />
           </div>
         </div>
@@ -157,7 +166,6 @@ export default function Dashboard() {
         {/* RIGHT: List, search, pagination */}
         <div className="col-md-7">
           <div className="container card card-body">
-            {/* Header row with search box */}
             <div className="d-flex justify-content-between align-items-center mb-2">
               <h5 className="mb-0">Patients</h5>
               <input
@@ -168,26 +176,26 @@ export default function Dashboard() {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setPage(1); // Reset to first page after new search
+                  setPage(1);
                 }}
               />
             </div>
 
-            {/* Patient table (current page only) */}
             <PatientTable
               patients={current}
-              onEdit={setEditing}           // pass entire patient for editing
-              onDelete={setSelectedPatient} // store id for ConfirmModal
-              onUpload={handleUpload}       // 🔁 NEW: upload attachments
+              onEdit={setEditing}
+              onDelete={setSelectedPatient}
+              onUpload={handleUpload}
+              onViewAttachments={setAttachmentPatient}
             />
 
-            {/* Confirm delete modal */}
+            {/* Confirm delete patient modal */}
             <ConfirmModal
               show={!!selectedPatient}
               message="Are you sure that you wish to delete the patient?"
               onConfirm={async () => {
                 if (!selectedPatient) return;
-                await remove(selectedPatient); // selectedPatient is patient id
+                await remove(selectedPatient);
                 setSelectedPatient(null);
               }}
               onCancel={() => setSelectedPatient(null)}
@@ -195,10 +203,18 @@ export default function Dashboard() {
               cancelText="Cancel"
             />
 
-            {/* Pagination controls */}
+            {/* Attachments viewer modal */}
+            <AttachmentsModal
+              show={!!attachmentPatient}
+              patient={attachmentPatient}
+              onClose={() => setAttachmentPatient(null)}
+              onDeleteAttachment={handleDeleteAttachment}
+            />
+
+            {/* Pagination */}
             <nav aria-label="Patient pages">
               <ul className="pagination pagination-sm mb-0 justify-content-end">
-                <li className={`page-item ${safePage === 1 ? 'disabled' : ''}`}>
+                <li className={`page-item ${safePage === 1 ? "disabled" : ""}`}>
                   <button
                     className="page-link"
                     onClick={() => goTo(safePage - 1)}
@@ -211,7 +227,7 @@ export default function Dashboard() {
                   <li
                     key={idx}
                     className={`page-item ${
-                      safePage === idx + 1 ? 'active' : ''
+                      safePage === idx + 1 ? "active" : ""
                     }`}
                   >
                     <button
@@ -225,7 +241,7 @@ export default function Dashboard() {
 
                 <li
                   className={`page-item ${
-                    safePage === totalPages ? 'disabled' : ''
+                    safePage === totalPages ? "disabled" : ""
                   }`}
                 >
                   <button
@@ -237,7 +253,6 @@ export default function Dashboard() {
                 </li>
               </ul>
             </nav>
-
           </div>
         </div>
       </div>

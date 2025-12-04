@@ -2,22 +2,21 @@
  * PatientTable Component
  * ----------------------
  * - Renders a responsive table of patient records.
- * - Shows name, email, and phone for each patient.
- * - Exposes Edit and Delete actions via callbacks:
- *    - onEdit(patient)        → parent handles edit state
- *    - onDelete(id)           → parent handles delete + confirmation
- *    - onUpload(id, file)     → parent handles file upload for attachments
- *
- * Note:
- *  - ConfirmModal is not used directly here; it is rendered in the parent
- *    (e.g., Dashboard.jsx) which receives the selected patient id from onDelete.
+ * - Shows name, email, phone.
+ * - Provides buttons for:
+ *    - Edit
+ *    - Delete
+ *    - Upload X-ray
+ *    - View Attachments
  */
 
-import ConfirmModal from "./ConfirmModal"; // currently not used in this component
-
-export default function PatientTable({ patients, onEdit, onDelete, onUpload }) {
-  // onUpload is a callback for uploading attachments (e.g. X-rays)
-
+export default function PatientTable({
+  patients,
+  onEdit,
+  onDelete,
+  onUpload,
+  onViewAttachments,
+}) {
   return (
     <div className="table-responsive mb-4">
       <table className="table table-striped rounded border table-bordered">
@@ -26,7 +25,7 @@ export default function PatientTable({ patients, onEdit, onDelete, onUpload }) {
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
-            <th>Actions</th> {/* actions column */}
+            <th style={{ width: "220px" }}>Actions</th>
           </tr>
         </thead>
 
@@ -38,7 +37,7 @@ export default function PatientTable({ patients, onEdit, onDelete, onUpload }) {
               <td>{p.phone}</td>
 
               <td className="text-center">
-                {/* Edit button forwards entire patient object */}
+                {/* Edit button */}
                 <button
                   className="btn btn-sm btn-outline-secondary p-1 w-100 mb-1"
                   onClick={() => onEdit(p)}
@@ -46,7 +45,7 @@ export default function PatientTable({ patients, onEdit, onDelete, onUpload }) {
                   Edit
                 </button>
 
-                {/* Delete button forwards only the patient id */}
+                {/* Delete button */}
                 <button
                   className="btn btn-sm btn-outline-danger p-1 w-100 mb-1"
                   onClick={() => onDelete(p._id)}
@@ -54,22 +53,34 @@ export default function PatientTable({ patients, onEdit, onDelete, onUpload }) {
                   Delete
                 </button>
 
-                {/* Upload button with hidden file input */}
-                <label className="btn btn-sm btn-outline-primary p-1 w-100 mb-0">
+                {/* Upload X-ray / attachment */}
+                <label className="btn btn-sm btn-outline-primary p-1 w-100 mb-1">
                   Upload X-ray
                   <input
                     type="file"
                     hidden
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
+                      const file = e.target.files[0];
                       if (file && onUpload) {
                         onUpload(p._id, file);
                       }
-                      // reset input so selecting the same file again still fires onChange
+                      // reset input so the same file can be selected again
                       e.target.value = "";
                     }}
                   />
                 </label>
+
+                {/* View attachments (if any) */}
+                <button
+                  className="btn btn-sm btn-outline-dark p-1 w-100"
+                  onClick={() => onViewAttachments && onViewAttachments(p)}
+                  disabled={!p.attachments || p.attachments.length === 0}
+                >
+                  View Attachments
+                  {p.attachments && p.attachments.length > 0
+                    ? ` (${p.attachments.length})`
+                    : ""}
+                </button>
               </td>
             </tr>
           ))}

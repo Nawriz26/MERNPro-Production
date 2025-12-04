@@ -23,6 +23,7 @@
  * Notes:
  * - Any additional ownership checks can be enforced in appointmentController
  */
+// routes/appointmentRoutes.js
 
 import express from "express";
 import {
@@ -35,48 +36,30 @@ import { protect, requireRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* --------------------------------------------
- *   Apply authentication to ALL appointment routes
- * --------------------------------------------
- * Every endpoint below this line requires a
- * valid JWT and a resolved req.user.
- * ------------------------------------------ */
+// All appointment routes require authentication
 router.use(protect);
 
-/* --------------------------------------------
- *   ROUTES: /api/appointments
- * ------------------------------------------ */
-
-// GET /api/appointments
-//   → List appointments (all authenticated users)
-// POST /api/appointments
-//   → Create new appointment (admin, dentist, receptionist)
+// /api/appointments  → list + create
 router
   .route("/")
   .get(
-    getAppointments // 📄 Get all appointments (scope enforced in controller if needed)
+    requireRole("admin", "dentist", "receptionist"), // 👀 staff can view all
+    getAppointments
   )
   .post(
-    requireRole("admin", "dentist", "receptionist"), // 👩‍⚕️ Staff who can schedule
+    requireRole("admin", "dentist", "receptionist"), // 📝 staff can create
     createAppointment
   );
 
-/* --------------------------------------------
- *   ROUTES: /api/appointments/:id
- * ------------------------------------------ */
-
-// PUT /api/appointments/:id
-//   → Update appointment (admin, dentist, receptionist)
-// DELETE /api/appointments/:id
-//   → Delete appointment (admin, dentist)
+// /api/appointments/:id → update + delete
 router
   .route("/:id")
   .put(
-    requireRole("admin", "dentist", "receptionist"), // ✏️ Modify appointment details
+    requireRole("admin", "dentist", "receptionist"), // ✏ staff can update
     updateAppointment
   )
   .delete(
-    requireRole("admin", "dentist"), // ❌ Only admin + dentist can delete
+    requireRole("admin", "dentist"),                 // ❌ only admin/dentist delete
     deleteAppointment
   );
 

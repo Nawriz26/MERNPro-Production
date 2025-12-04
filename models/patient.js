@@ -19,18 +19,34 @@ const patientSchema = new mongoose.Schema(
       required: true,
       unique: true,
       lowercase: true,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
 
     phone: {
       type: String,
       required: true,
+      match: /^\d{3}-\d{3}-\d{4}$/,
     },
 
-    dateOfBirth: Date,
-    address: String,
+    dateOfBirth: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function (value) {
+          return value < new Date();
+        },
+        message: "Date of birth must be before today",
+      },
+    },
+
+    address: {
+      type: String,
+      required: true,
+    },
+
     notes: String,
 
-    // 🔐 Attachments such as X-rays / reports
+    // Attachments such as X-rays / reports
     attachments: [
       {
         filename: String,

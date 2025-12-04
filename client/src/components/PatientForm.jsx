@@ -1,16 +1,15 @@
-/**
- * PatientForm Component
- * ---------------------
- * - Handles creation and editing of patient records
- * - Uses controlled inputs
- * - When editing, preloads selected patient data into form
- * - Calls onSubmit() with form payload
- */
+// PatientForm.jsx
+// ---------------
+// Controlled form for creating/editing a patient.
+// Validations:
+// - email: required, valid email
+// - phone: required, format xxx-xxx-xxxx
+// - dateOfBirth: required, must be before today
+// - address: required
 
 import { useState, useEffect } from 'react';
 
 export default function PatientForm({ onSubmit, initial }) {
-  // Default patient object
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -20,12 +19,25 @@ export default function PatientForm({ onSubmit, initial }) {
     notes: '',
   });
 
-  // Populate form when editing an existing patient
+  const [errors, setErrors] = useState({});
+
+  // Set max for DOB (today) in yyyy-mm-dd
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Initialize form when editing
   useEffect(() => {
     if (initial) {
-      setForm(initial); // Fill with editing data
+      setForm({
+        name: initial.name || '',
+        email: initial.email || '',
+        phone: initial.phone || '',
+        dateOfBirth: initial.dateOfBirth
+          ? initial.dateOfBirth.slice(0, 10)
+          : '',
+        address: initial.address || '',
+        notes: initial.notes || '',
+      });
     } else {
-      // Reset for new patient
       setForm({
         name: '',
         email: '',
@@ -37,12 +49,57 @@ export default function PatientForm({ onSubmit, initial }) {
     }
   }, [initial]);
 
-  // Handle form submission
+  const validate = () => {
+    const errs = {};
+
+    if (!form.name.trim()) errs.name = 'Name is required';
+
+    // Email required + simple regex
+    if (!form.email.trim()) {
+      errs.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email)) {
+        errs.email = 'Please enter a valid email';
+      }
+    }
+
+    // Phone required + xxx-xxx-xxxx
+    if (!form.phone.trim()) {
+      errs.phone = 'Phone number is required';
+    } else {
+      const phoneRegex = /^\d{3}-\d{3}-\d{4}$/;
+      if (!phoneRegex.test(form.phone)) {
+        errs.phone = 'Phone format must be xxx-xxx-xxxx';
+      }
+    }
+
+    // DOB required + < today
+    if (!form.dateOfBirth) {
+      errs.dateOfBirth = 'Date of birth is required';
+    } else {
+      const dob = new Date(form.dateOfBirth);
+      const today = new Date(todayStr); // ignore time of day
+      if (dob >= today) {
+        errs.dateOfBirth = 'Date of birth must be before today';
+      }
+    }
+
+    // Address required
+    if (!form.address.trim()) {
+      errs.address = 'Address is required';
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const submit = (e) => {
     e.preventDefault();
+    if (!validate()) return;
     onSubmit(form);
 
-    // Reset form only if adding a NEW patient
+    // Only reset form after creating a new patient
     if (!initial) {
       setForm({
         name: '',
@@ -52,30 +109,62 @@ export default function PatientForm({ onSubmit, initial }) {
         address: '',
         notes: '',
       });
+      setErrors({});
     }
   };
 
-  // Reusable field generator
-  const field = (key, type = 'text', label = null) => (
+  const field = (key, type = 'text', label = null, extraProps = {}) => (
     <div className="mb-2">
       <label className="form-label">{label ?? key}</label>
       <input
         type={type}
-        className="form-control"
+        className={`form-control ${errors[key] ? 'is-invalid' : ''}`}
         value={form[key] ?? ''}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+        {...extraProps}
       />
+      {errors[key] && <div className="invalid-feedback">{errors[key]}</div>}
     </div>
   );
 
   return (
     <form onSubmit={submit}>
-      {field('name', 'text', 'Name')}
-      {field('email', 'email', 'Email')}
-      {field('phone', 'text', 'Phone')}
-      {field('dateOfBirth', 'date', 'Date of Birth')}
-      {field('address', 'text', 'Address')}
-      {field('notes', 'text', 'Notes')}
+      {field('name', 'text', 'Name', { required: true })}
+      {field('email', 'email', 'Email', {
+        required: true,
+        placeholder: 'user@example.com',
+      })}
+      {field('phone', 'text', 'Phone', {
+        required: true,
+        placeholder: '123-456-7890',
+      })}
+      {field('dateOfBirth', 'date', 'Date of Birth', {
+        required: true,
+        max: todayStr,
+      })}
+
+      <div className="mb-2">
+        <label className="form-label">Address</label>
+        <input
+          className={`form-control ${errors.address ? 'is-invalid' : ''}`}
+          value={form.address}
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
+          required
+        />
+        {errors.address && (
+          <div className="invalid-feedback">{errors.address}</div>
+        )}
+      </div>
+
+      <div className="mb-2">
+        <label className="form-label">Notes</label>
+        <textarea
+          className="form-control"
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          rows={2}
+        />
+      </div>
 
       <button className="btn btn-primary mt-3 float-end">
         {initial ? 'Update' : 'Save'}

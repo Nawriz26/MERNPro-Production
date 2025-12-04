@@ -10,7 +10,9 @@
  * - Renders shared Navbar + ToastContainer globally
  *
  * Notes:
+ * - Public routes:  /, /login, /signup
  * - Protected routes: /dashboard, /profile, /appointments, /calendar
+ *   (actual role-based visibility for links is handled in Navbar + backend)
  */
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -32,7 +34,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 import Appointments from './pages/Appointments';
-import Calendar from './pages/Calendar'; // 🆕 Calendar page for appointments view
+import Calendar from './pages/Calendar'; // Calendar page for appointments view
 
 export default function App() {
   return (
@@ -66,7 +68,7 @@ export default function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/appointments" element={<Appointments />} />
-                {/* 🆕 Calendar route – protected, only visible for logged-in users */}
+                {/* Calendar route – protected. Role-based access is enforced on backend + Navbar */}
                 <Route path="/calendar" element={<Calendar />} />
               </Route>
 

@@ -1,62 +1,111 @@
 // Appointments.jsx
 // ----------------
-// - Lists upcoming appointments
-// - Allows create, edit, delete
-// - Uses /api/appointments backend
+// - Allows staff to create / edit / delete appointments
+// - Patient is selected from dropdown (patients fetched from API)
+// - Validations:
+//   - patientId: required
+//   - date: required & > today
+//   - time: required
+//   - reason: required
+//   - status: required
 
-import { useEffect, useState } from "react";
-import api from "../api/axios";
-import { toast } from "react-toastify";
+import { useEffect, useState } from 'react';
+import api from '../api/axios';
+import { toast } from 'react-toastify';
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([]);
+  const [patients, setPatients] = useState([]);
+
   const [form, setForm] = useState({
-    patientName: "",
-    date: "",
-    time: "",
-    reason: "",
-    status: "Scheduled",
+    patientId: '',
+    date: '',
+    time: '',
+    reason: '',
+    status: 'Scheduled',
   });
+
+  const [errors, setErrors] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const loadAppointments = async () => {
     try {
-      const { data } = await api.get("/appointments");
+      const { data } = await api.get('/appointments');
       setAppointments(data);
-    } catch (err) {
-      console.error("Load appointments error:", err);
-      toast.error("Failed to load appointments");
+    } catch {
+      toast.error('Failed to load appointments');
+    }
+  };
+
+  const loadPatients = async () => {
+    try {
+      const { data } = await api.get('/patients');
+      setPatients(data);
+    } catch {
+      toast.error('Failed to load patients');
     }
   };
 
   useEffect(() => {
-    load();
+    loadAppointments();
+    loadPatients();
   }, []);
+
+  const validate = () => {
+    const errs = {};
+
+    if (!form.patientId) errs.patientId = 'Patient is required';
+
+    if (!form.date) {
+      errs.date = 'Date is required';
+    } else {
+      const chosen = new Date(form.date);
+      const today = new Date(todayStr);
+      if (chosen <= today) {
+        errs.date = 'Date must be greater than today';
+      }
+    }
+
+    if (!form.time) errs.time = 'Time is required';
+
+    if (!form.reason.trim()) errs.reason = 'Reason is required';
+
+    if (!form.status) errs.status = 'Status is required';
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
+
     setLoading(true);
     try {
       if (editingId) {
         await api.put(`/appointments/${editingId}`, form);
-        toast.success("Appointment updated");
+        toast.success('Appointment updated');
       } else {
-        await api.post("/appointments", form);
-        toast.success("Appointment created");
+        await api.post('/appointments', form);
+        toast.success('Appointment created');
       }
+
       setForm({
-        patientName: "",
-        date: "",
-        time: "",
-        reason: "",
-        status: "Scheduled",
+        patientId: '',
+        date: '',
+        time: '',
+        reason: '',
+        status: 'Scheduled',
       });
       setEditingId(null);
-      await load();
+      setErrors({});
+      await loadAppointments();
     } catch (err) {
-      console.error("Save appointment error:", err);
-      toast.error("Error saving appointment");
+      const msg = err.response?.data?.message || 'Error saving appointment';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -65,24 +114,22 @@ export default function Appointments() {
   const onEdit = (appt) => {
     setEditingId(appt._id);
     setForm({
-      patientName: appt.patientName || "",
-      date: appt.date?.slice(0, 10) || "",
-      time: appt.time || "",
-      reason: appt.reason || "",
-      status: appt.status || "Scheduled",
+      patientId: appt.patientId?._id || appt.patientId || '',
+      date: appt.date?.slice(0, 10) || '',
+      time: appt.time || '',
+      reason: appt.reason || '',
+      status: appt.status || 'Scheduled',
     });
   };
 
   const onDelete = async (id) => {
-    if (!window.confirm("Delete this appointment?")) return;
+    if (!window.confirm('Delete this appointment?')) return;
     try {
       await api.delete(`/appointments/${id}`);
-      toast.success("Appointment deleted");
-      await load();
-    } catch (err) {
-      console.error("Delete appointment error:", err);
-      const msg = err.response?.data?.message || "Error deleting appointment";
-      toast.error(msg);
+      toast.success('Appointment deleted');
+      await loadAppointments();
+    } catch {
+      toast.error('Error deleting appointment');
     }
   };
 
@@ -91,81 +138,113 @@ export default function Appointments() {
       <h2>Appointments</h2>
 
       <div className="row mt-3">
+        {/* LEFT: Appointment form */}
         <div className="col-md-5">
           <div className="card card-body">
-            <h5>{editingId ? "Edit Appointment" : "New Appointment"}</h5>
+            <h5>{editingId ? 'Edit Appointment' : 'New Appointment'}</h5>
             <form onSubmit={onSubmit}>
+              {/* Patient dropdown */}
               <div className="mb-2">
-                <label className="form-label">Patient Name</label>
-                <input
-                  className="form-control"
-                  value={form.patientName}
+                <label className="form-label">Patient</label>
+                <select
+                  className={`form-select ${errors.patientId ? 'is-invalid' : ''}`}
+                  value={form.patientId}
                   onChange={(e) =>
-                    setForm({ ...form, patientName: e.target.value })
+                    setForm({ ...form, patientId: e.target.value })
                   }
                   required
-                />
+                >
+                  <option value="">Select a patient</option>
+                  {patients.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} — {p.email}
+                    </option>
+                  ))}
+                </select>
+                {errors.patientId && (
+                  <div className="invalid-feedback">{errors.patientId}</div>
+                )}
               </div>
 
+              {/* Date */}
               <div className="mb-2">
                 <label className="form-label">Date</label>
                 <input
                   type="date"
-                  className="form-control"
+                  className={`form-control ${errors.date ? 'is-invalid' : ''}`}
                   value={form.date}
                   onChange={(e) =>
                     setForm({ ...form, date: e.target.value })
                   }
                   required
+                  min={todayStr} // UI hint; validate again in JS
                 />
+                {errors.date && (
+                  <div className="invalid-feedback">{errors.date}</div>
+                )}
               </div>
 
+              {/* Time */}
               <div className="mb-2">
                 <label className="form-label">Time</label>
                 <input
                   type="time"
-                  className="form-control"
+                  className={`form-control ${errors.time ? 'is-invalid' : ''}`}
                   value={form.time}
                   onChange={(e) =>
                     setForm({ ...form, time: e.target.value })
                   }
                   required
                 />
+                {errors.time && (
+                  <div className="invalid-feedback">{errors.time}</div>
+                )}
               </div>
 
+              {/* Reason */}
               <div className="mb-2">
                 <label className="form-label">Reason</label>
                 <input
-                  className="form-control"
+                  className={`form-control ${errors.reason ? 'is-invalid' : ''}`}
                   value={form.reason}
                   onChange={(e) =>
                     setForm({ ...form, reason: e.target.value })
                   }
+                  required
                 />
+                {errors.reason && (
+                  <div className="invalid-feedback">{errors.reason}</div>
+                )}
               </div>
 
+              {/* Status */}
               <div className="mb-2">
                 <label className="form-label">Status</label>
                 <select
-                  className="form-select"
+                  className={`form-select ${errors.status ? 'is-invalid' : ''}`}
                   value={form.status}
                   onChange={(e) =>
                     setForm({ ...form, status: e.target.value })
                   }
+                  required
                 >
-                  <option>Scheduled</option>
-                  <option>Completed</option>
-                  <option>Cancelled</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
+                {errors.status && (
+                  <div className="invalid-feedback">{errors.status}</div>
+                )}
               </div>
 
               <button className="btn btn-primary mt-2" disabled={loading}>
-                {loading ? "Saving..." : "Save"}
+                {loading ? 'Saving...' : 'Save'}
               </button>
             </form>
           </div>
         </div>
 
+        {/* RIGHT: Appointment list */}
         <div className="col-md-7">
           <div className="card card-body">
             <h5>Upcoming Appointments</h5>
@@ -182,7 +261,9 @@ export default function Appointments() {
               <tbody>
                 {appointments.map((a) => (
                   <tr key={a._id}>
-                    <td>{a.patientName}</td>
+                    <td>
+                      {a.patientId?.name || a.patientName || 'Unknown'}
+                    </td>
                     <td>{a.date?.slice(0, 10)}</td>
                     <td>{a.time}</td>
                     <td>{a.status}</td>
@@ -213,6 +294,7 @@ export default function Appointments() {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );

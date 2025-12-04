@@ -23,13 +23,19 @@ import Patient from '../models/patient.js';
  * @route  GET /api/appointments
  * @access Private
  */
-export const getAppointments = asyncHandler(async (req, res) => {
-  const appointments = await Appointment.find({ user: req.user._id })
-    .populate('patientId', 'name email phone') // join patient fields
-    .sort({ date: 1, time: 1 }); // sort chronologically
+export const getAppointments = async (req, res) => {
+  try {
+    // All staff see everything.
+    const appointments = await Appointment.find()
+      .populate("patientId", "name email phone") // if patientId is referenced
+      .sort({ date: 1, time: 1 });
 
-  res.json(appointments);
-});
+    res.json(appointments);
+  } catch (err) {
+    console.error("getAppointments error:", err);
+    res.status(500).json({ message: "Failed to fetch appointments" });
+  }
+};
 
 /**
  * @desc   Create a new appointment

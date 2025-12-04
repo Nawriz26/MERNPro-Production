@@ -4,13 +4,17 @@
  * - Displays logo, navigation links, and auth actions
  * - Shows different menu items depending on login status & role
  * - Includes dark mode toggle (via DarkModeContext)
- * - Responsive: includes hamburger menu
+ * - Responsive: includes hamburger menu for small screens
  *
  * Role-based visibility:
- * - Dashboard: all authenticated users
- * - Appointments: admin, dentist, receptionist
- * - Calendar: admin, dentist, receptionist
- * - (Future) Admin page: admin only
+ * - Dashboard : all authenticated users
+ * - Appointments : admin, dentist, receptionist
+ * - Calendar : admin, dentist, receptionist
+ * - Admin (future) : admin only
+ *
+ * Also:
+ * - Shows total patient count badge on Dashboard (from PatientContext)
+ * - Shows current user's username + role badge on the right
  */
 
 import { useState } from 'react';
@@ -31,13 +35,13 @@ export default function Navbar() {
   const toggle = () => setIsOpen((prev) => !prev);
   const closeMenu = () => setIsOpen(false);
 
-  // Dynamic styling for NavLink
+  // Dynamic styling for NavLink based on active route
   const navLinkClass = ({ isActive }) =>
     `nav-link d-flex align-items-center nav-link-animated ${
       isActive ? 'active fw-semibold text-warning' : 'text-white-50'
     }`;
 
-  // Simple helper for RBAC checks
+  // Simple helper for role-based access checks
   const hasRole = (...roles) => user && roles.includes(user.role);
 
   return (
@@ -78,7 +82,7 @@ export default function Navbar() {
 
         {/* LEFT SIDE LINKS */}
         <ul className="navbar-nav me-auto">
-          {/* Home */}
+          {/* Home (always visible) */}
           <li className="nav-item">
             <NavLink className={navLinkClass} to="/" onClick={closeMenu}>
               <i className="bi bi-house me-1"></i> Home
@@ -127,7 +131,7 @@ export default function Navbar() {
                 </li>
               )}
 
-              {/* 🆕 Calendar: only for admin, dentist, receptionist */}
+              {/* Calendar: only for admin, dentist, receptionist */}
               {hasRole('admin', 'dentist', 'receptionist') && (
                 <li className="nav-item">
                   <NavLink className={navLinkClass} to="/calendar" onClick={closeMenu}>
@@ -179,6 +183,7 @@ export default function Navbar() {
                   <span className="fw-semibold text-white">
                     {user.username}
                   </span>
+                  {/* Role badge (admin / dentist / receptionist) */}
                   {user.role && (
                     <span className="badge bg-light text-dark ms-2 text-capitalize">
                       {user.role}

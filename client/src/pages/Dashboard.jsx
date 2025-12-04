@@ -1,11 +1,5 @@
 // Dashboard.jsx
 // Patient Dashboard page.
-// - Loads all patients from the backend
-// - Allows Create / Update / Delete via PatientForm + PatientTable
-// - Includes search + pagination + confirmation modal for deletes
-// - Updates global patientCount in PatientContext (for navbar badge)
-// Dashboard.jsx
-// Patient Dashboard page.
 
 import { useEffect, useState } from "react";
 import api from "../api/axios";
@@ -19,8 +13,8 @@ import AttachmentsModal from "../components/AttachmentsModal";
 export default function Dashboard() {
   const [patients, setPatients] = useState([]);
   const [editing, setEditing] = useState(null);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [attachmentPatient, setAttachmentPatient] = useState(null); // 👈 NEW
+  const [selectedPatient, setSelectedPatient] = useState(null); // id for delete
+  const [attachmentPatient, setAttachmentPatient] = useState(null); // patient object for modal
 
   const { setPatientCount } = usePatients();
 
@@ -68,9 +62,14 @@ export default function Dashboard() {
 
   // Delete patient by id
   const remove = async (id) => {
-    await api.delete(`/patients/${id}`);
-    toast.success("Patient deleted");
-    await load();
+    try {
+      await api.delete(`/patients/${id}`);
+      toast.success("Patient deleted");
+      await load();
+    } catch (err) {
+      const msg = err.response?.data?.message || "Error deleting patient";
+      toast.error(msg);
+    }
   };
 
   // Decide create vs update
@@ -83,17 +82,16 @@ export default function Dashboard() {
     setEditing(null);
   };
 
-  // 🔹 Upload handler for attachments (X-rays)
+  // Upload handler for attachments (X-rays)
   const handleUpload = async (patientId, file) => {
     if (!file) return;
+
     const formData = new FormData();
     formData.append("file", file);
 
     try {
       await api.post(`/patients/${patientId}/attachments`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Attachment uploaded");
       await load();
@@ -103,26 +101,12 @@ export default function Dashboard() {
     }
   };
 
-  // 🔹 Delete single attachment
+  // Delete single attachment – used by AttachmentsModal
   const handleDeleteAttachment = async (patientId, attachmentId) => {
     try {
-      await api.delete(
-        `/patients/${patientId}/attachments/${attachmentId}`
-      );
+      await api.delete(`/patients/${patientId}/attachments/${attachmentId}`);
       toast.success("Attachment deleted");
       await load();
-
-      // If modal is open on this patient, keep it refreshed
-      setAttachmentPatient((prev) =>
-        prev && prev._id === patientId
-          ? {
-              ...prev,
-              attachments: prev.attachments.filter(
-                (a) => a._id !== attachmentId
-              ),
-            }
-          : prev
-      );
     } catch (err) {
       console.error("Delete attachment error:", err);
       toast.error("Failed to delete attachment");
@@ -181,12 +165,13 @@ export default function Dashboard() {
               />
             </div>
 
+            {/* Patient table */}
             <PatientTable
               patients={current}
               onEdit={setEditing}
-              onDelete={setSelectedPatient}
-              onUpload={handleUpload}
-              onViewAttachments={setAttachmentPatient}
+              onDelete={setSelectedPatient}           // pass ID to confirm modal
+              onUpload={handleUpload}                  // handle file upload
+              onViewAttachments={setAttachmentPatient} // opens attachments modal
             />
 
             {/* Confirm delete patient modal */}

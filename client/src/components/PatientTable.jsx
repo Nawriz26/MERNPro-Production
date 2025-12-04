@@ -7,7 +7,14 @@
  *    - Edit
  *    - Delete
  *    - Upload X-ray
- *    - View Attachments
+ *    - View Attachments (opens modal)
+ *
+ * Props:
+ *  - patients: array of patient objects
+ *  - onEdit(patient)
+ *  - onDelete(patientId)
+ *  - onUpload(patientId, file)
+ *  - onViewAttachments(patient)
  */
 
 export default function PatientTable({
@@ -25,7 +32,7 @@ export default function PatientTable({
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
-            <th style={{ width: "220px" }}>Actions</th>
+            <th style={{ width: "230px" }}>Actions</th>
           </tr>
         </thead>
 
@@ -45,7 +52,7 @@ export default function PatientTable({
                   Edit
                 </button>
 
-                {/* Delete button */}
+                {/* Delete button (opens ConfirmModal via parent) */}
                 <button
                   className="btn btn-sm btn-outline-danger p-1 w-100 mb-1"
                   onClick={() => onDelete(p._id)}
@@ -64,13 +71,13 @@ export default function PatientTable({
                       if (file && onUpload) {
                         onUpload(p._id, file);
                       }
-                      // reset input so the same file can be selected again
+                      // allow selecting the same file again
                       e.target.value = "";
                     }}
                   />
                 </label>
 
-                {/* View attachments (if any) */}
+                {/* View attachments (opens modal) */}
                 <button
                   className="btn btn-sm btn-outline-dark p-1 w-100"
                   onClick={() => onViewAttachments && onViewAttachments(p)}

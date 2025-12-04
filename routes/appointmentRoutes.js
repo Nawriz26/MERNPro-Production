@@ -1,29 +1,21 @@
 /**
  * appointmentRoutes.js
  * ---------------------
- * Express routes for Appointment CRUD operations.
+ * Defines Express routes for Appointment CRUD operations.
  *
- * Base URL: /api/appointments
+ * Route prefix: /api/appointments
  *
- * Features:
- * - Full CRUD for appointment records
- * - Role-based access control (Admin / Dentist / Receptionist)
+ * Responsibilities:
+ * - All routes protected using authMiddleware (router.use(protect))
+ * - GET    /        → Fetch all appointments
+ * - POST   /        → Create new appointment
+ * - PUT    /:id     → Update appointment by ID
+ * - DELETE /:id     → Delete appointment by ID
  *
- * Security:
- * - All routes require authentication (protect middleware)
- * - Mutating routes are restricted by role (requireRole)
- *
- * Endpoints:
- *   GET    /           → List appointments (all authenticated users)
- *   POST   /           → Create new appointment (admin, dentist, receptionist)
- *
- *   PUT    /:id        → Update appointment (admin, dentist, receptionist)
- *   DELETE /:id        → Delete appointment (admin, dentist)
- *
- * Notes:
- * - Any additional ownership checks can be enforced in appointmentController
+ * Role-based rules:
+ * - Create / Update: admin, dentist, receptionist
+ * - Delete         : admin, dentist, receptionist   ✅ updated
  */
-// routes/appointmentRoutes.js
 
 import express from "express";
 import {
@@ -36,18 +28,19 @@ import { protect, requireRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// All appointment routes require authentication
+// Apply authentication to ALL appointment routes
 router.use(protect);
 
 // /api/appointments  → list + create
 router
   .route("/")
   .get(
-    requireRole("admin", "dentist", "receptionist"), // 👀 staff can view all
+    // All authenticated roles can view appointments
     getAppointments
   )
   .post(
-    requireRole("admin", "dentist", "receptionist"), // 📝 staff can create
+    // Only staff roles can create appointments
+    requireRole("admin", "dentist", "receptionist"),
     createAppointment
   );
 
@@ -55,11 +48,13 @@ router
 router
   .route("/:id")
   .put(
-    requireRole("admin", "dentist", "receptionist"), // ✏ staff can update
+    // Only staff roles can update appointments
+    requireRole("admin", "dentist", "receptionist"),
     updateAppointment
   )
   .delete(
-    requireRole("admin", "dentist"),                 // ❌ only admin/dentist delete
+    // ✅ Now admin, dentist, receptionist can delete
+    requireRole("admin", "dentist", "receptionist"),
     deleteAppointment
   );
 
